@@ -2,7 +2,9 @@
 gatherUsageStats = false
 
 [server]
-headless = false
+headless = true
+port = 8501
+address = "0.0.0.0"
 maxUploadSize = 4096
 enableCORS = false
 enableXsrfProtection = false
