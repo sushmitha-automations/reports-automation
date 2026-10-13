@@ -2,4 +2,4 @@ polars>=0.20.0
 pyarrow>=17.0.0,<25.0.0
 openpyxl>=3.1.2
 streamlit>=1.32.0
-
+fastexcel>=0.11.0

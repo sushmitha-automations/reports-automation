@@ -17,7 +17,11 @@ from loaders import (
     load_chroma_masters, load_onboarding_funnel
 )
 from adherence_engine import evaluate_attendance_adherence
-from excel_builder import build_attendance_adherence_report, build_onboarding_report
+from punch_engine import build_punch_adherence_dataset
+from excel_builder import (
+    build_attendance_adherence_report, build_onboarding_report,
+    build_punch_adherence_report
+)
 
 def get_month_dates(year: int, month: int, cutoff_day: int) -> List[str]:
     """Generates a list of date strings 'YYYY-MM-DD' from day 1 up to cutoff_day."""
@@ -168,6 +172,77 @@ def run_onboarding_report(
     )
 
     notify(1.00, f"Onboarding Report created successfully: {os.path.basename(out_file)}")
+    return out_file
+
+def run_punch_adherence_report(
+    base_dir: str,
+    output_dir: str,
+    reporting_date_str: str = "10th Oct",
+    year: int = 2026,
+    month: int = 10,
+    cutoff_day: int = 10,
+    progress_callback: Optional[Callable[[float, str], None]] = None
+) -> str:
+    """
+    Executes the complete Punch Adherence Report pipeline.
+    """
+    def notify(pct: float, msg: str):
+        if progress_callback:
+            progress_callback(pct, msg)
+        print(f"[{int(pct * 100)}%] {msg}")
+
+    os.makedirs(output_dir, exist_ok=True)
+    date_list = get_month_dates(year, month, cutoff_day)
+
+    notify(0.04, "Locating Onroll & Offroll Headcount and Facility Master...")
+    onroll_file = find_file_by_pattern(base_dir, ['*Onroll*.xlsx', '*onroll*.xlsx', 'Onroll HC.xlsx'])
+    if not onroll_file:
+        raise FileNotFoundError(f"Onroll HC.xlsx not found in {base_dir}")
+
+    offroll_file = find_file_by_pattern(base_dir, ['*Offroll*.xlsx', '*offroll*.xlsx', 'Offroll HC.xlsx'])
+    if not offroll_file:
+        raise FileNotFoundError(f"Offroll HC.xlsx not found in {base_dir}")
+
+    fac_csv = find_file_by_pattern(base_dir, ['*Facility*.csv', '*facility*.csv', 'Valinor Dump-Facility.csv'])
+    if not fac_csv:
+        raise FileNotFoundError(f"Valinor Dump-Facility.csv not found in {base_dir}")
+
+    notify(0.12, "Locating Biometric Attendance punch records...")
+    att_csv = find_file_by_pattern(base_dir, ['*Attendance*.csv', '*attendance*.csv', 'Valinor Attendance.csv'])
+    if not att_csv:
+        raise FileNotFoundError(f"Valinor Attendance file not found in {base_dir}")
+
+    notify(0.18, "Locating Chroma masters for role enrichment...")
+    chroma_files = []
+    for pat in ['*(LM)*.xlsx', '*LM*.xlsx', '*(FM)*.xlsx', '*FM*.xlsx', '*(HL*.xlsx', '*HL*.xlsx', '*Corp*.xlsx']:
+        matches = glob.glob(os.path.join(base_dir, pat))
+        for m in matches:
+            if m not in chroma_files and not os.path.basename(m).startswith('~$'):
+                chroma_files.append(m)
+
+    notify(0.25, f"Assembling workforce & joining daily punches with Polars ({len(date_list)} days)...")
+    workforce_records, base_hub_combos = build_punch_adherence_dataset(
+        onroll_path=onroll_file,
+        offroll_path=offroll_file,
+        attendance_csv_path=att_csv,
+        facility_master_csv_path=fac_csv,
+        chroma_file_paths=chroma_files,
+        date_list=date_list
+    )
+    print(f"      Net workforce assembled: {len(workforce_records)} records, {len(base_hub_combos)} facility combos.")
+
+    out_file = os.path.join(output_dir, f"Punch Adherence Report - {reporting_date_str}.xlsx")
+    notify(0.40, "Generating Excel sheets with formulas and Aptos Narrow styling...")
+    excel_cb = (lambda p, m: notify(0.40 + p * 0.59, m)) if progress_callback else None
+    build_punch_adherence_report(
+        output_path=out_file,
+        date_list=date_list,
+        workforce_records=workforce_records,
+        base_hub_combos=base_hub_combos,
+        progress_callback=excel_cb
+    )
+
+    notify(1.00, f"Punch Adherence Report created successfully: {os.path.basename(out_file)}")
     return out_file
 
 if __name__ == '__main__':

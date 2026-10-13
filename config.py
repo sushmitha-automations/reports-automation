@@ -116,3 +116,32 @@ FMT_PERCENT_INT = '0%'
 FMT_INT_COMMAS = '#,##0'
 FMT_DATE_ISO = 'YYYY-MM-DD'
 FMT_DATE_HEADER = 'DD-MMM-YY'
+
+# ==============================================================================
+# PUNCH ADHERENCE REPORT CONFIGURATION & STYLING
+# ==============================================================================
+PUNCH_LM_PODS = [
+    'POD_ROK/KL', 'POD_MP/RJ', 'POD_UP', 'POD_CCU/ROWB', 'POD_NCR/UP_West',
+    'POD_NE', 'POD_GJ', 'POD_ROMH', 'POD_JK/HP/HR/PB/UK', 'POD_BOM/PNQ',
+    'POD_BH/JH', 'POD_CHN', 'POD_CG/OD', 'POD_AP/TS', 'POD_ROTN',
+    'POD_HYD', 'POD_BLR'
+]
+
+PUNCH_HL_REGIONS = ['HL_East', 'HL_West', 'HL_South', 'HL_North']
+
+PUNCH_FM_REGIONS = ['FM_East', 'FM_South', 'FM_North', 'FM_West']
+
+PUNCH_HORO_SITES = [
+    'Bangalore - HO', 'GURUGRAM - RO', 'Bangalore - RO', 'CHANDIGARH - RO',
+    'MUMBAI - RO', 'JAIPUR - RO', 'PATNA - RO', 'CHENNAI - RO',
+    'KOLKATA - RO', 'HYDERABAD - RO', 'PUNE - RO', 'BHUBANESWAR - RO'
+]
+
+FILL_PUNCH_HDR = PatternFill(start_color='C6D9F1', end_color='C6D9F1', fill_type='solid')
+FILL_PUNCH_RED = PatternFill(start_color='FF0000', end_color='FF0000', fill_type='solid')
+FILL_PUNCH_AMBER = PatternFill(start_color='FCE4D6', end_color='FCE4D6', fill_type='solid')
+FILL_PUNCH_GREEN = PatternFill(start_color='92D050', end_color='92D050', fill_type='solid')
+FILL_PUNCH_TOTAL = PatternFill(start_color='D0D0D0', end_color='D0D0D0', fill_type='solid')
+
+FONT_APTOS_9_BOLD = Font(name='Aptos Narrow', size=9, bold=True, color='000000')
+

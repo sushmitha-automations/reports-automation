@@ -4,17 +4,19 @@ Applies exact cell styling, fonts, borders, fills, number formats, column dimens
 and live Excel formulas strictly matching reference reports with zero over-styling.
 """
 import os
-from typing import Dict, List, Any, Optional, Callable
+from typing import Dict, List, Any, Optional, Callable, Tuple
 import openpyxl
 from openpyxl.utils import get_column_letter
 
 from config import (
     LM_PODS, HL_REGIONS, FM_REGIONS, HORO_SITES,
+    PUNCH_LM_PODS, PUNCH_HL_REGIONS, PUNCH_FM_REGIONS, PUNCH_HORO_SITES,
     REF_VAL_RULES, REF_ROLE_RULES,
     BORDER_THIN_GRAY, BORDER_THIN_BLACK, BORDER_DOUBLE_BOTTOM,
     FILL_DARK_BLUE, FILL_LIGHT_BLUE, FILL_SOFT_BLUE_HDR, FILL_YELLOW, FILL_RED, FILL_LIGHT_GRAY,
+    FILL_PUNCH_HDR, FILL_PUNCH_RED, FILL_PUNCH_AMBER, FILL_PUNCH_GREEN, FILL_PUNCH_TOTAL,
     FONT_CALIBRI_11, FONT_CALIBRI_11_BOLD, FONT_CALIBRI_11_BOLD_WHITE,
-    FONT_APTOS_11, FONT_APTOS_11_BOLD, FONT_APTOS_11_BOLD_WHITE,
+    FONT_APTOS_11, FONT_APTOS_11_BOLD, FONT_APTOS_11_BOLD_WHITE, FONT_APTOS_9_BOLD,
     ALIGN_CENTER, ALIGN_CENTER_WRAP, ALIGN_LEFT,
     FMT_TEXT, FMT_PERCENT_2DEC, FMT_PERCENT_INT, FMT_INT_COMMAS
 )
@@ -876,3 +878,324 @@ def build_onboarding_report(
     wb.save(output_path)
     wb.close()
     notify(1.00, "Onboarding Report workbook generated.")
+
+
+# ==============================================================================
+# PUNCH ADHERENCE REPORT GENERATOR
+# ==============================================================================
+
+def build_punch_adherence_report(
+    output_path: str,
+    date_list: List[str],
+    workforce_records: List[Dict[str, Any]],
+    base_hub_combos: List[Tuple[str, str, str]],
+    progress_callback: Optional[Callable[[float, str], None]] = None
+):
+    """
+    Constructs the 7-sheet Punch Adherence Report with exact Aptos Narrow formatting,
+    live COUNTIFS & VLOOKUP formulas, Red/Amber/Green headers, and Base facility summaries.
+    """
+    def notify(pct: float, msg: str):
+        if progress_callback:
+            progress_callback(pct, msg)
+
+    wb = openpyxl.Workbook()
+    wb.remove(wb.active)
+
+    # 1. Instantiate worksheets in frontmost order
+    notify(0.05, "Creating worksheets in frontmost order...")
+    ws_lm = wb.create_sheet(title='Attendance Adherence - LM')
+    ws_hl = wb.create_sheet(title='Attendance Adherence - HL')
+    ws_fm = wb.create_sheet(title='Attendance Adherence - FM')
+    ws_horo = wb.create_sheet(title='Attendance Adherence - HO-RO')
+    ws_att = wb.create_sheet(title='Attendance Base')
+    ws_base = wb.create_sheet(title='Base')
+    ws_punched = wb.create_sheet(title='Punched Base')
+
+    num_days = len(date_list)
+    total_wf = len(workforce_records)
+
+    # -------------------------------------------------------------------------
+    # Helper: Populate Summary Sheets (LM, HL, FM, HO-RO)
+    # -------------------------------------------------------------------------
+    def populate_summary_sheet(ws, label_header: str, entity_list: List[str]):
+        ws.row_dimensions[1].height = 24
+        ws.row_dimensions[2].height = 20
+
+        r1 = [label_header, 'Onroll HC', 'Offroll HC', 'Total HC', 'Red', 'Amber', 'Green', 'Compliance %']
+        r2 = [None, None, None, None, 'No Punches(30+D)', 'Punches Received (4-29D)', 'Recent Punches(3D)', None]
+        ws.append(r1)
+        ws.append(r2)
+
+        ws.merge_cells('A1:A2')
+        ws.merge_cells('B1:B2')
+        ws.merge_cells('C1:C2')
+        ws.merge_cells('D1:D2')
+        ws.merge_cells('H1:H2')
+
+        # Style Header Row 1
+        for c in range(1, 9):
+            cell = ws.cell(row=1, column=c)
+            cell.font = FONT_APTOS_9_BOLD
+            cell.alignment = ALIGN_CENTER_WRAP
+            cell.border = BORDER_THIN_GRAY
+            if c == 5:
+                cell.fill = FILL_PUNCH_RED
+            elif c == 6:
+                cell.fill = FILL_PUNCH_AMBER
+            elif c == 7:
+                cell.fill = FILL_PUNCH_GREEN
+            else:
+                cell.fill = FILL_PUNCH_HDR
+
+        # Style Header Row 2
+        for c in range(1, 9):
+            cell = ws.cell(row=2, column=c)
+            cell.font = FONT_APTOS_9_BOLD
+            cell.alignment = ALIGN_CENTER_WRAP
+            cell.border = BORDER_THIN_GRAY
+            if c in (5, 6, 7):
+                cell.fill = FILL_PUNCH_HDR
+
+        # Data Rows
+        start_r = 3
+        for idx, entity in enumerate(entity_list):
+            cur_r = start_r + idx
+            ws.row_dimensions[cur_r].height = 19
+
+            f_on = f"=COUNTIFS('Punched Base'!$D:$D, $A{cur_r}, 'Punched Base'!$C:$C, \"On-Roll\")"
+            f_off = f"=COUNTIFS('Punched Base'!$D:$D, $A{cur_r}, 'Punched Base'!$C:$C, \"Off-Roll\")"
+            f_tot = f"=B{cur_r}+C{cur_r}"
+            f_red = f"=COUNTIFS('Punched Base'!$D:$D, $A{cur_r}, 'Punched Base'!$H:$H, \"Red\")"
+            f_amb = f"=COUNTIFS('Punched Base'!$D:$D, $A{cur_r}, 'Punched Base'!$H:$H, \"Amber\")"
+            f_grn = f"=COUNTIFS('Punched Base'!$D:$D, $A{cur_r}, 'Punched Base'!$H:$H, \"Green\")"
+            f_comp = f"=IFERROR(G{cur_r}/D{cur_r},1)"
+
+            row_data = [entity, f_on, f_off, f_tot, f_red, f_amb, f_grn, f_comp]
+            ws.append(row_data)
+
+            for c in range(1, 9):
+                cell = ws.cell(row=cur_r, column=c)
+                cell.font = FONT_APTOS_11
+                cell.border = BORDER_THIN_GRAY
+                if c == 1:
+                    cell.alignment = ALIGN_LEFT
+                else:
+                    cell.alignment = ALIGN_CENTER
+                    if c == 8:
+                        cell.number_format = FMT_PERCENT_INT
+                    else:
+                        cell.number_format = FMT_INT_COMMAS
+
+        # Grand Total Row
+        tot_r = start_r + len(entity_list)
+        ws.row_dimensions[tot_r].height = 21
+        end_r = tot_r - 1
+
+        tot_vals = [
+            'Grand Total',
+            f"=SUM(B3:B{end_r})",
+            f"=SUM(C3:C{end_r})",
+            f"=SUM(D3:D{end_r})",
+            f"=SUM(E3:E{end_r})",
+            f"=SUM(F3:F{end_r})",
+            f"=SUM(G3:G{end_r})",
+            f"=IFERROR(G{tot_r}/D{tot_r},1)"
+        ]
+        ws.append(tot_vals)
+
+        for c in range(1, 9):
+            cell = ws.cell(row=tot_r, column=c)
+            cell.font = FONT_APTOS_11_BOLD
+            cell.fill = FILL_PUNCH_TOTAL
+            cell.border = BORDER_THIN_GRAY
+            if c == 1:
+                cell.alignment = ALIGN_LEFT
+            else:
+                cell.alignment = ALIGN_CENTER
+                if c == 8:
+                    cell.number_format = FMT_PERCENT_INT
+                else:
+                    cell.number_format = FMT_INT_COMMAS
+
+        ws.column_dimensions['A'].width = 22.0
+        for c_let in ('B', 'C', 'D', 'E', 'F', 'G', 'H'):
+            ws.column_dimensions[c_let].width = 13.0
+
+    # -------------------------------------------------------------------------
+    # SHEET 5: Attendance Base
+    # -------------------------------------------------------------------------
+    notify(0.15, f"Writing Attendance Base ({total_wf:,} rows)...")
+    ws_att.row_dimensions[1].height = 24
+    formatted_date_headers = [format_date_header(d) for d in date_list]
+    att_h1 = ['ID', 'Name', 'Type', 'POD', 'Registered Facility', 'Department', 'Role'] + formatted_date_headers + ['Punches in last 30days', 'Punches in last 3days', 'Color Status']
+    ws_att.append(att_h1)
+
+    for c in range(1, len(att_h1) + 1):
+        cell = ws_att.cell(row=1, column=c)
+        cell.font = FONT_APTOS_9_BOLD
+        cell.fill = FILL_PUNCH_HDR
+        cell.alignment = ALIGN_CENTER
+        cell.border = BORDER_THIN_GRAY
+
+    # Blank Row 2 matching reference
+    ws_att.append([None] * len(att_h1))
+    for c in range(1, len(att_h1) + 1):
+        cell = ws_att.cell(row=2, column=c)
+        cell.border = BORDER_THIN_GRAY
+
+    first_date_col = get_column_letter(8)
+    last_date_col = get_column_letter(7 + num_days)
+    third_last_col = get_column_letter(max(8, 7 + num_days - 2))
+    col_30d_let = get_column_letter(8 + num_days)
+    col_3d_let = get_column_letter(9 + num_days)
+
+    for idx, emp in enumerate(workforce_records):
+        cur_r = 3 + idx
+        f_30d = f'=IF(COUNTIF({first_date_col}{cur_r}:{last_date_col}{cur_r},"P")>0,"Y","N")'
+        f_3d = f'=IF(COUNTIF({third_last_col}{cur_r}:{last_date_col}{cur_r},"P")>0,"Y","N")'
+        f_col = f'=IF({col_3d_let}{cur_r}="Y","Green",IF({col_30d_let}{cur_r}="Y","Amber","Red"))'
+
+        d_punches = [emp['punches'].get(d, 'A') for d in date_list]
+        row_vals = [
+            emp['id'], emp['name'], emp['type'], emp['pod'], emp['facility'],
+            emp['department'], emp['role']
+        ] + d_punches + [f_30d, f_3d, f_col]
+        ws_att.append(row_vals)
+
+        ws_att.cell(row=cur_r, column=1).number_format = FMT_TEXT
+
+        if idx > 0 and idx % 4000 == 0:
+            notify(0.15 + (idx / total_wf) * 0.35, f"Writing Attendance Base: {idx:,} / {total_wf:,} rows...")
+
+    for row in ws_att.iter_rows(min_row=3, max_row=2 + total_wf):
+        for idx, cell in enumerate(row):
+            cell.font = FONT_APTOS_11
+            cell.border = BORDER_THIN_GRAY
+            if idx in (0, 1, 3, 4, 5, 6):
+                cell.alignment = ALIGN_LEFT
+            else:
+                cell.alignment = ALIGN_CENTER
+
+    ws_att.column_dimensions['A'].width = 16.0
+    ws_att.column_dimensions['B'].width = 24.0
+    ws_att.column_dimensions['C'].width = 14.0
+    ws_att.column_dimensions['D'].width = 22.0
+    ws_att.column_dimensions['E'].width = 24.0
+    ws_att.column_dimensions['F'].width = 18.0
+    ws_att.column_dimensions['G'].width = 18.0
+    for c_idx in range(8, len(att_h1) + 1):
+        ws_att.column_dimensions[get_column_letter(c_idx)].width = 13.0
+
+    # -------------------------------------------------------------------------
+    # SHEET 7: Punched Base
+    # -------------------------------------------------------------------------
+    notify(0.55, f"Writing Punched Base ({total_wf:,} rows)...")
+    ws_punched.row_dimensions[1].height = 24
+    pb_h1 = ['ID', 'Name', 'Type', 'POD', 'Hub Name', 'Punches in last 30days', 'Punches in last 3days', 'Color Status']
+    ws_punched.append(pb_h1)
+
+    for c in range(1, len(pb_h1) + 1):
+        cell = ws_punched.cell(row=1, column=c)
+        cell.font = FONT_APTOS_9_BOLD
+        cell.fill = FILL_PUNCH_HDR
+        cell.alignment = ALIGN_CENTER
+        cell.border = BORDER_THIN_GRAY
+
+    col_30d_idx = 8 + num_days
+    col_3d_idx = 9 + num_days
+
+    for idx, emp in enumerate(workforce_records):
+        cur_r = 2 + idx
+        f_v_30d = f"=VLOOKUP(A{cur_r},'Attendance Base'!$A:$T,{col_30d_idx},FALSE)"
+        f_v_3d = f"=VLOOKUP(A{cur_r},'Attendance Base'!$A:$T,{col_3d_idx},FALSE)"
+        f_v_col = f'=IF(G{cur_r}="Y","Green",IF(F{cur_r}="Y","Amber","Red"))'
+
+        row_vals = [emp['id'], emp['name'], emp['type'], emp['pod'], emp['facility'], f_v_30d, f_v_3d, f_v_col]
+        ws_punched.append(row_vals)
+        ws_punched.cell(row=cur_r, column=1).number_format = FMT_TEXT
+
+    for row in ws_punched.iter_rows(min_row=2, max_row=1 + total_wf):
+        for idx, cell in enumerate(row):
+            cell.font = FONT_APTOS_11
+            cell.border = BORDER_THIN_GRAY
+            if idx in (0, 1, 3, 4):
+                cell.alignment = ALIGN_LEFT
+            else:
+                cell.alignment = ALIGN_CENTER
+
+    ws_punched.column_dimensions['A'].width = 16.0
+    ws_punched.column_dimensions['B'].width = 24.0
+    ws_punched.column_dimensions['C'].width = 14.0
+    ws_punched.column_dimensions['D'].width = 22.0
+    ws_punched.column_dimensions['E'].width = 24.0
+    ws_punched.column_dimensions['F'].width = 14.0
+    ws_punched.column_dimensions['G'].width = 14.0
+    ws_punched.column_dimensions['H'].width = 14.0
+
+    # -------------------------------------------------------------------------
+    # SHEET 6: Base (Facility Summary)
+    # -------------------------------------------------------------------------
+    notify(0.70, f"Writing Base ({len(base_hub_combos):,} facilities)...")
+    ws_base.row_dimensions[1].height = 24
+    base_h1 = ['Hub Name', 'POD Name', 'Veticle', 'Onroll HC', 'Offroll HC', 'Total HC', 'Red', 'Amber', 'Green', 'Compliance %']
+    ws_base.append(base_h1)
+
+    for c in range(1, len(base_h1) + 1):
+        cell = ws_base.cell(row=1, column=c)
+        cell.font = FONT_APTOS_9_BOLD
+        cell.alignment = ALIGN_CENTER_WRAP
+        cell.border = BORDER_THIN_GRAY
+        if c == 7:
+            cell.fill = FILL_PUNCH_RED
+        elif c == 8:
+            cell.fill = FILL_PUNCH_AMBER
+        elif c == 9:
+            cell.fill = FILL_PUNCH_GREEN
+        else:
+            cell.fill = FILL_PUNCH_HDR
+
+    for idx, (hub, pod, vehicle) in enumerate(base_hub_combos):
+        cur_r = 2 + idx
+        f_on = f"=COUNTIFS('Punched Base'!$E:$E, $A{cur_r}, 'Punched Base'!$D:$D, $B{cur_r}, 'Punched Base'!$C:$C, \"On-Roll\")"
+        f_off = f"=COUNTIFS('Punched Base'!$E:$E, $A{cur_r}, 'Punched Base'!$D:$D, $B{cur_r}, 'Punched Base'!$C:$C, \"Off-Roll\")"
+        f_tot = f"=D{cur_r}+E{cur_r}"
+        f_red = f"=COUNTIFS('Punched Base'!$E:$E, $A{cur_r}, 'Punched Base'!$D:$D, $B{cur_r}, 'Punched Base'!$H:$H, \"Red\")"
+        f_amb = f"=COUNTIFS('Punched Base'!$E:$E, $A{cur_r}, 'Punched Base'!$D:$D, $B{cur_r}, 'Punched Base'!$H:$H, \"Amber\")"
+        f_grn = f"=COUNTIFS('Punched Base'!$E:$E, $A{cur_r}, 'Punched Base'!$D:$D, $B{cur_r}, 'Punched Base'!$H:$H, \"Green\")"
+        f_comp = f"=IFERROR(I{cur_r}/F{cur_r},1)"
+
+        row_vals = [hub, pod, vehicle, f_on, f_off, f_tot, f_red, f_amb, f_grn, f_comp]
+        ws_base.append(row_vals)
+
+    for row in ws_base.iter_rows(min_row=2, max_row=1 + len(base_hub_combos)):
+        for idx, cell in enumerate(row):
+            cell.font = FONT_APTOS_11
+            cell.border = BORDER_THIN_GRAY
+            if idx in (0, 1, 2):
+                cell.alignment = ALIGN_LEFT
+            else:
+                cell.alignment = ALIGN_CENTER
+                if idx == 9:
+                    cell.number_format = FMT_PERCENT_INT
+                else:
+                    cell.number_format = FMT_INT_COMMAS
+
+    ws_base.column_dimensions['A'].width = 22.0
+    for c_let in ('B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'):
+        ws_base.column_dimensions[c_let].width = 13.0
+
+    # -------------------------------------------------------------------------
+    # Populate Summary Tabs (Frontmost 1 to 4)
+    # -------------------------------------------------------------------------
+    notify(0.85, "Writing Executive Summary tabs (LM, HL, FM, HO-RO)...")
+    populate_summary_sheet(ws_lm, 'POD', PUNCH_LM_PODS)
+    populate_summary_sheet(ws_hl, 'Region', PUNCH_HL_REGIONS)
+    populate_summary_sheet(ws_fm, 'Region', PUNCH_FM_REGIONS)
+    populate_summary_sheet(ws_horo, 'Site', PUNCH_HORO_SITES)
+
+    notify(0.96, "Saving Punch Adherence Report workbook to disk...")
+    wb.save(output_path)
+    wb.close()
+    notify(1.00, "Punch Adherence Report generated successfully!")
+
