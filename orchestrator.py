@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, Tuple, Callable
 from config import (
     LM_PODS, HL_REGIONS, FM_REGIONS, HORO_SITES
 )
-from loaders import (
+from data_loaders import (
     load_facility_master, load_user_master, load_valinor_attendance,
     load_chroma_masters, load_onboarding_funnel
 )

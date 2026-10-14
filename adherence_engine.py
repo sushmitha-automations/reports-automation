@@ -4,7 +4,7 @@ Implements the 3-Way Identity Resolution (Aadhaar -> Mobile -> ID)
 and evaluates daily attendance status adherence between Chroma and Valinor.
 """
 from typing import Dict, List, Any, Optional
-from loaders import normalize_pod, map_hl_pod, map_fm_pod
+from data_loaders import normalize_pod, map_hl_pod, map_fm_pod
 
 def evaluate_attendance_adherence(
     chroma_rows: List[Dict[str, Any]],
