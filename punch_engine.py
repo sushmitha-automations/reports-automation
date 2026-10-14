@@ -70,7 +70,7 @@ def build_punch_adherence_dataset(
         base_hub_combos: list of unique (Hub Name, POD Name, Veticle) tuples for Base sheet
     """
     # 1. Load Facility Master POD Map
-    df_fac = pl.read_csv(facility_master_csv_path, ignore_errors=True)
+    df_fac = pl.read_csv(facility_master_csv_path, ignore_errors=True, infer_schema_length=0)
     fac_cols = {c.strip().lower(): c for c in df_fac.columns}
     fac_name_col = fac_cols.get('facility name') or df_fac.columns[1]
     pod_name_col = fac_cols.get('pod name') or df_fac.columns[5]
