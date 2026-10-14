@@ -86,13 +86,15 @@ BORDER_DOUBLE_BOTTOM = Border(
     bottom=Side(style='double', color='000000')
 )
 
-# Colors & Fills
+# Colors & Fills (Office Theme Palette)
 FILL_DARK_BLUE = PatternFill(start_color='1F497D', end_color='1F497D', fill_type='solid')      # Primary dark blue headers
-FILL_LIGHT_BLUE = PatternFill(start_color='DBE9F7', end_color='DBE9F7', fill_type='solid')     # Onboarding headers
-FILL_SOFT_BLUE_HDR = PatternFill(start_color='B8CCE4', end_color='B8CCE4', fill_type='solid')  # Attendance check sub-headers
+FILL_HEADER_BLUE_LIGHT_80 = PatternFill(start_color='DCE6F1', end_color='DCE6F1', fill_type='solid')  # Dark blue, text 2, Lighter 80%
+FILL_GRAND_TOTAL_DARK_25 = PatternFill(start_color='BFBFBF', end_color='BFBFBF', fill_type='solid')   # White, background 1, darker 25%
+FILL_LIGHT_BLUE = FILL_HEADER_BLUE_LIGHT_80                                                             # Onboarding headers
+FILL_SOFT_BLUE_HDR = FILL_HEADER_BLUE_LIGHT_80                                                          # Attendance check sub-headers
 FILL_YELLOW = PatternFill(start_color='FFFF00', end_color='FFFF00', fill_type='solid')         # Compliance % header
 FILL_RED = PatternFill(start_color='FF0000', end_color='FF0000', fill_type='solid')            # Red cases header
-FILL_LIGHT_GRAY = PatternFill(start_color='D9D9D9', end_color='D9D9D9', fill_type='solid')     # Grand total rows
+FILL_LIGHT_GRAY = FILL_GRAND_TOTAL_DARK_25                                                      # Grand total rows
 
 # Fonts
 FONT_CALIBRI_11 = Font(name='Calibri', size=11, bold=False, color='000000')

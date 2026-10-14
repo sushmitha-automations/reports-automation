@@ -7,13 +7,16 @@ import os
 from typing import Dict, List, Any, Optional, Callable, Tuple
 import openpyxl
 from openpyxl.utils import get_column_letter
+from openpyxl.formatting.rule import ColorScaleRule
 
 from config import (
     LM_PODS, HL_REGIONS, FM_REGIONS, HORO_SITES,
     PUNCH_LM_PODS, PUNCH_HL_REGIONS, PUNCH_FM_REGIONS, PUNCH_HORO_SITES,
     REF_VAL_RULES, REF_ROLE_RULES,
     BORDER_THIN_GRAY, BORDER_THIN_BLACK, BORDER_DOUBLE_BOTTOM,
-    FILL_DARK_BLUE, FILL_LIGHT_BLUE, FILL_SOFT_BLUE_HDR, FILL_YELLOW, FILL_RED, FILL_LIGHT_GRAY,
+    FILL_DARK_BLUE, FILL_LIGHT_BLUE, FILL_SOFT_BLUE_HDR,
+    FILL_HEADER_BLUE_LIGHT_80, FILL_GRAND_TOTAL_DARK_25,
+    FILL_YELLOW, FILL_RED, FILL_LIGHT_GRAY,
     FILL_PUNCH_HDR, FILL_PUNCH_RED, FILL_PUNCH_AMBER, FILL_PUNCH_GREEN, FILL_PUNCH_TOTAL,
     FONT_CALIBRI_11, FONT_CALIBRI_11_BOLD, FONT_CALIBRI_11_BOLD_WHITE,
     FONT_APTOS_11, FONT_APTOS_11_BOLD, FONT_APTOS_11_BOLD_WHITE, FONT_APTOS_9_BOLD,
@@ -482,13 +485,24 @@ def build_attendance_adherence_report(
         for c_idx in range(1, len(tot_row_data) + 1):
             cell = ws.cell(row=tot_row_num, column=c_idx)
             cell.font = FONT_CALIBRI_11_BOLD
-            cell.fill = FILL_LIGHT_GRAY
+            cell.fill = FILL_GRAND_TOTAL_DARK_25
             cell.border = BORDER_THIN_GRAY
             cell.alignment = ALIGN_LEFT if c_idx == 1 else ALIGN_CENTER
             if c_idx > 1 and (c_idx - 2) % 4 == 3:
                 cell.number_format = FMT_PERCENT_2DEC
             elif c_idx > 1:
                 cell.number_format = FMT_INT_COMMAS
+
+        # Adherence % - Green Yellow - Red Color Scale (Min: Red F8696B, 50th: Yellow FFEB84, Max: Green 63BE7B)
+        for d_idx in range(num_days):
+            adh_col_let = get_column_letter(5 + d_idx * 4)
+            cf_range = f"{adh_col_let}3:{adh_col_let}{tot_row_num - 1}"
+            color_scale_rule = ColorScaleRule(
+                start_type='min', start_color='F8696B',
+                mid_type='percentile', mid_value=50, mid_color='FFEB84',
+                end_type='max', end_color='63BE7B'
+            )
+            ws.conditional_formatting.add(cf_range, color_scale_rule)
 
         # Column widths
         ws.column_dimensions['A'].width = 22 if label_header == 'POD' else 14
@@ -556,7 +570,7 @@ def build_onboarding_report(
     ws_base.append(base_headers)
     for cell in ws_base[1]:
         cell.font = FONT_APTOS_11_BOLD
-        cell.fill = FILL_LIGHT_BLUE
+        cell.fill = FILL_HEADER_BLUE_LIGHT_80
         cell.alignment = ALIGN_CENTER
         cell.border = BORDER_THIN_GRAY
 
@@ -599,9 +613,9 @@ def build_onboarding_report(
 
             if c_idx == 1:
                 cell_1.font = FONT_APTOS_11_BOLD
-                cell_1.fill = FILL_LIGHT_BLUE
+                cell_1.fill = FILL_HEADER_BLUE_LIGHT_80
                 cell_2.font = FONT_APTOS_11_BOLD
-                cell_2.fill = FILL_LIGHT_BLUE
+                cell_2.fill = FILL_HEADER_BLUE_LIGHT_80
             else:
                 mod = (c_idx - 2) % 5
                 if mod == 4:
@@ -611,13 +625,13 @@ def build_onboarding_report(
                     cell_2.fill = FILL_RED
                 else:
                     cell_1.font = FONT_APTOS_11_BOLD
-                    cell_1.fill = FILL_LIGHT_BLUE
+                    cell_1.fill = FILL_HEADER_BLUE_LIGHT_80
                     if mod == 3:
                         cell_2.font = FONT_APTOS_11_BOLD
                         cell_2.fill = FILL_YELLOW
                     else:
                         cell_2.font = FONT_APTOS_11_BOLD
-                        cell_2.fill = FILL_LIGHT_BLUE
+                        cell_2.fill = FILL_HEADER_BLUE_LIGHT_80
 
         # Daily Table Data Rows
         start_row = 3
@@ -678,7 +692,7 @@ def build_onboarding_report(
         for c_idx in range(1, len(tot_row_data) + 1):
             cell = ws.cell(row=tot_row_num, column=c_idx)
             cell.font = FONT_APTOS_11_BOLD
-            cell.fill = FILL_LIGHT_GRAY
+            cell.fill = FILL_GRAND_TOTAL_DARK_25
             cell.border = BORDER_THIN_GRAY
             cell.alignment = ALIGN_LEFT if c_idx == 1 else ALIGN_CENTER
             if c_idx > 1 and (c_idx - 2) % 5 == 3:
@@ -708,7 +722,7 @@ def build_onboarding_report(
             cell_2.alignment = ALIGN_CENTER
 
             cell_1.font = FONT_APTOS_11_BOLD
-            cell_1.fill = FILL_LIGHT_BLUE
+            cell_1.fill = FILL_HEADER_BLUE_LIGHT_80
             cell_2.font = FONT_APTOS_11_BOLD
             if c == 5:
                 cell_2.fill = FILL_YELLOW
@@ -716,7 +730,7 @@ def build_onboarding_report(
                 cell_2.font = FONT_APTOS_11_BOLD_WHITE
                 cell_2.fill = FILL_RED
             else:
-                cell_2.fill = FILL_LIGHT_BLUE
+                cell_2.fill = FILL_HEADER_BLUE_LIGHT_80
 
         # MTD Data rows
         mtd_data_start = mtd_start + 2
@@ -763,7 +777,7 @@ def build_onboarding_report(
         for c_idx in range(1, 7):
             cell = ws.cell(row=mtd_tot_r, column=c_idx)
             cell.font = FONT_APTOS_11_BOLD
-            cell.fill = FILL_LIGHT_GRAY
+            cell.fill = FILL_GRAND_TOTAL_DARK_25
             cell.border = BORDER_THIN_GRAY
             cell.alignment = ALIGN_LEFT if c_idx == 1 else ALIGN_CENTER
             if c_idx == 5:
@@ -792,7 +806,7 @@ def build_onboarding_report(
         ws.append(['Approved by', 'Manual cases', 'Red Case', 'total'])
         for cell in ws[1]:
             cell.font = FONT_APTOS_11_BOLD
-            cell.fill = FILL_LIGHT_BLUE
+            cell.fill = FILL_HEADER_BLUE_LIGHT_80
             cell.border = BORDER_THIN_GRAY
             cell.alignment = ALIGN_CENTER
 
@@ -857,7 +871,7 @@ def build_onboarding_report(
         for c in range(1, 5):
             cell = ws.cell(row=tot_r, column=c)
             cell.font = FONT_APTOS_11_BOLD
-            cell.fill = FILL_LIGHT_GRAY
+            cell.fill = FILL_GRAND_TOTAL_DARK_25
             cell.border = BORDER_THIN_GRAY
             cell.alignment = ALIGN_LEFT if c == 1 else ALIGN_CENTER
             if c > 1:

@@ -9,7 +9,7 @@ import glob
 import time
 import io
 import zipfile
-from datetime import datetime
+from datetime import datetime, date
 import streamlit as st
 import polars as pl
 import openpyxl
@@ -381,27 +381,52 @@ with col_stat3:
         st.markdown("<span class='badge-missing'>🔴 Onboarding: MISSING FUNNEL CSV</span>", unsafe_allow_html=True)
 
 # ==============================================================================
-# SECTION 3: REPORTING PERIOD CONFIGURATION
+# SECTION 3: REPORTING PERIOD CONFIGURATION (CALENDAR FORMAT)
 # ==============================================================================
 
 st.markdown("---")
 st.markdown("### 3. Reporting Period")
 
-rc1, rc2, rc3, rc4 = st.columns([2, 1, 1, 1])
+def format_calendar_ordinal_label(dt: date) -> str:
+    """Formats date into standard report label e.g., '10th Oct', '30th Sep', '14th Oct'."""
+    day = dt.day
+    if 11 <= (day % 100) <= 13:
+        suffix = 'th'
+    else:
+        suffix = {1: 'st', 2: 'nd', 3: 'rd'}.get(day % 10, 'th')
+    return f"{day}{suffix} {dt.strftime('%b')}"
 
-# Determine smart default cutoff based on files detected
-default_label = "10th Oct" if onroll else "30th Sep"
-default_day = 10 if onroll else 30
-default_month = 10 if onroll else 9
+# Determine smart default date based on detected files
+if onroll:
+    initial_cal_date = date(2026, 10, 10)
+else:
+    initial_cal_date = date(2026, 9, 30)
 
-with rc1:
-    report_label = st.text_input("Report Date Label", value=default_label, help="Used in file naming: e.g., 'Punch Adherence Report - 10th Oct.xlsx'")
-with rc2:
-    sel_day = st.number_input("Cutoff Day", min_value=1, max_value=31, value=default_day, help="D-0 or D-1 cutoff day")
-with rc3:
-    sel_month = st.number_input("Month", min_value=1, max_value=12, value=default_month)
-with rc4:
-    sel_year = st.number_input("Year", min_value=2024, max_value=2030, value=2026)
+cal_col1, cal_col2 = st.columns([1, 1])
+
+with cal_col1:
+    picked_date = st.date_input(
+        "📅 Select Cutoff Date (Calendar Picker)",
+        value=initial_cal_date,
+        format="YYYY-MM-DD",
+        help="Select the exact reporting date directly from the calendar."
+    )
+
+computed_label = format_calendar_ordinal_label(picked_date)
+
+with cal_col2:
+    report_label = st.text_input(
+        "🏷️ Report Date Label (Calendar Formatted)",
+        value=computed_label,
+        help="Automatically synced with your calendar selection. Used in generated report filenames (e.g., 'Punch Adherence Report - 10th Oct.xlsx')."
+    )
+
+sel_day = picked_date.day
+sel_month = picked_date.month
+sel_year = picked_date.year
+
+st.caption(f"ℹ️ Configured Reporting Cutoff: **Day {sel_day}**, **Month {sel_month} ({picked_date.strftime('%B')})**, **Year {sel_year}** • Report Filename Label: **{report_label}**")
+
 
 # ==============================================================================
 # SECTION 4: EXECUTION ACTIONS
