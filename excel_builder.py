@@ -409,19 +409,19 @@ def build_attendance_adherence_report(
         ws.append(r1)
         ws.append(r2)
 
+        # Style header rows BEFORE merging to ensure all cells retain border and fill
+        for r_num in (1, 2):
+            for cell in ws[r_num]:
+                cell.font = FONT_CALIBRI_11_BOLD
+                cell.fill = FILL_HEADER_BLUE_LIGHT_80
+                cell.alignment = ALIGN_CENTER_WRAP
+                cell.border = BORDER_THIN_GRAY
+
         ws.merge_cells('A1:A2')
         for d_idx in range(num_days):
             sc = 2 + d_idx * 4
             ec = sc + 3
             ws.merge_cells(start_row=1, start_column=sc, end_row=1, end_column=ec)
-
-        # Style header rows
-        for r_num in (1, 2):
-            for cell in ws[r_num]:
-                cell.font = FONT_CALIBRI_11_BOLD
-                cell.fill = FILL_SOFT_BLUE_HDR
-                cell.alignment = ALIGN_CENTER_WRAP
-                cell.border = BORDER_THIN_GRAY
 
         # Data rows
         start_row = 3
@@ -460,7 +460,7 @@ def build_attendance_adherence_report(
                 else:
                     cell.alignment = ALIGN_CENTER
                     if (c_idx - 2) % 4 == 3:
-                        cell.number_format = FMT_PERCENT_2DEC
+                        cell.number_format = FMT_PERCENT_INT
                     else:
                         cell.number_format = FMT_INT_COMMAS
 
@@ -489,20 +489,23 @@ def build_attendance_adherence_report(
             cell.border = BORDER_THIN_GRAY
             cell.alignment = ALIGN_LEFT if c_idx == 1 else ALIGN_CENTER
             if c_idx > 1 and (c_idx - 2) % 4 == 3:
-                cell.number_format = FMT_PERCENT_2DEC
+                cell.number_format = FMT_PERCENT_INT
             elif c_idx > 1:
                 cell.number_format = FMT_INT_COMMAS
 
         # Adherence % - Green Yellow - Red Color Scale (Min: Red F8696B, 50th: Yellow FFEB84, Max: Green 63BE7B)
+        adh_ranges = []
         for d_idx in range(num_days):
             adh_col_let = get_column_letter(5 + d_idx * 4)
-            cf_range = f"{adh_col_let}3:{adh_col_let}{tot_row_num - 1}"
+            adh_ranges.append(f"{adh_col_let}3:{adh_col_let}{tot_row_num - 1}")
+        if adh_ranges:
+            combined_adh_range = " ".join(adh_ranges)
             color_scale_rule = ColorScaleRule(
                 start_type='min', start_color='F8696B',
                 mid_type='percentile', mid_value=50, mid_color='FFEB84',
                 end_type='max', end_color='63BE7B'
             )
-            ws.conditional_formatting.add(cf_range, color_scale_rule)
+            ws.conditional_formatting.add(combined_adh_range, color_scale_rule)
 
         # Column widths
         ws.column_dimensions['A'].width = 22 if label_header == 'POD' else 14
@@ -576,6 +579,10 @@ def build_onboarding_report(
 
     for row_vals in base_rows:
         ws_base.append(row_vals)
+    for row in ws_base.iter_rows(min_row=2):
+        for cell in row:
+            cell.font = FONT_APTOS_11
+            cell.border = BORDER_THIN_GRAY
 
     # -------------------------------------------------------------------------
     # SHEETS 1, 2, 3, 4: Aadhar Summary Sheets
@@ -595,13 +602,7 @@ def build_onboarding_report(
         ws.append(r1)
         ws.append(r2)
 
-        # Merge Header cells
-        for d_idx in range(num_days):
-            sc = 2 + d_idx * 5
-            ec = sc + 3
-            ws.merge_cells(start_row=1, start_column=sc, end_row=1, end_column=ec)
-
-        # Style Headers
+        # Style Headers BEFORE merging to ensure all cells get border and fill
         for c_idx in range(1, len(r1) + 1):
             cell_1 = ws.cell(row=1, column=c_idx)
             cell_2 = ws.cell(row=2, column=c_idx)
@@ -632,6 +633,13 @@ def build_onboarding_report(
                     else:
                         cell_2.font = FONT_APTOS_11_BOLD
                         cell_2.fill = FILL_HEADER_BLUE_LIGHT_80
+
+        # Merge Header cells
+        ws.merge_cells('A1:A2')
+        for d_idx in range(num_days):
+            sc = 2 + d_idx * 5
+            ec = sc + 3
+            ws.merge_cells(start_row=1, start_column=sc, end_row=1, end_column=ec)
 
         # Daily Table Data Rows
         start_row = 3
@@ -708,11 +716,9 @@ def build_onboarding_report(
         ws.append([])  # Spacing
         ws.append([])
         ws.append([label_header, 'MTD (D-1)', 'MTD (D-1)', 'MTD (D-1)', 'MTD (D-1)', 'MTD (D-1)'])
-        ws.merge_cells(start_row=mtd_start, start_column=2, end_row=mtd_start, end_column=6)
-
         ws.append([label_header, 'Total Onboarding', 'Aadhar', 'Manual', 'Compliance %', 'Red'])
 
-        # Style MTD headers
+        # Style MTD headers BEFORE merging
         for c in range(1, 7):
             cell_1 = ws.cell(row=mtd_start, column=c)
             cell_2 = ws.cell(row=mtd_start + 1, column=c)
@@ -731,6 +737,9 @@ def build_onboarding_report(
                 cell_2.fill = FILL_RED
             else:
                 cell_2.fill = FILL_HEADER_BLUE_LIGHT_80
+
+        ws.merge_cells(start_row=mtd_start, start_column=1, end_row=mtd_start + 1, end_column=1)
+        ws.merge_cells(start_row=mtd_start, start_column=2, end_row=mtd_start, end_column=6)
 
         # MTD Data rows
         mtd_data_start = mtd_start + 2
