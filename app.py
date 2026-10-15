@@ -286,7 +286,7 @@ with v_col1:
     if att:
         st.markdown(f"✅ **Biometric Punch:** <span class='file-name-tag'>{att['name']}</span> <span class='file-size-tag'>({att['size']})</span>", unsafe_allow_html=True)
     else:
-        st.markdown("❌ **Biometric Punch:** <span class='badge-missing'>Not Found (`Valinor Attendance.csv`)</span>", unsafe_allow_html=True)
+        st.markdown("❌ **Biometric Punch:** <span class='badge-missing'>Not Found (`Valinor Attendance.xlsx / .csv`)</span>", unsafe_allow_html=True)
 
     if c_lm:
         st.markdown(f"✅ **Chroma (LM):** <span class='file-name-tag'>{c_lm['name']}</span> <span class='file-size-tag'>({c_lm['size']})</span>", unsafe_allow_html=True)
@@ -318,7 +318,7 @@ with v_col2:
     if att:
         st.markdown(f"✅ **Biometric Punch:** <span class='file-name-tag'>{att['name']}</span> <span class='file-size-tag'>({att['size']})</span>", unsafe_allow_html=True)
     else:
-        st.markdown("❌ **Biometric Punch:** <span class='badge-missing'>Not Found (`Valinor Attendance.csv`)</span>", unsafe_allow_html=True)
+        st.markdown("❌ **Biometric Punch:** <span class='badge-missing'>Not Found (`Valinor Attendance.xlsx / .csv`)</span>", unsafe_allow_html=True)
 
     if fac:
         st.markdown(f"✅ **Facility Master:** <span class='file-name-tag'>{fac['name']}</span> <span class='file-size-tag'>({fac['size']})</span>", unsafe_allow_html=True)

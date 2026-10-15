@@ -7,6 +7,7 @@ and constructs Attendance Base, Punched Base, and Base data structures using Pol
 import os
 from typing import Dict, List, Tuple, Any, Optional
 import polars as pl
+import openpyxl
 
 from config import (
     PUNCH_LM_PODS, PUNCH_HL_REGIONS, PUNCH_FM_REGIONS, PUNCH_HORO_SITES
@@ -186,26 +187,61 @@ def build_punch_adherence_dataset(
             'punches': {}
         })
 
-    # 5. Load Biometric Attendance Punches (Valinor Attendance.csv)
-    df_att = pl.read_csv(attendance_csv_path, ignore_errors=True, infer_schema_length=0)
-    att_cols = {c.strip().lower(): c for c in df_att.columns}
+    # 5. Load Biometric Attendance Punches (Valinor Attendance.csv / .xlsx)
+    if attendance_csv_path.lower().endswith(('.xlsx', '.xls')):
+        try:
+            df_att = pl.read_excel(attendance_csv_path)
+            df_att = df_att.select([pl.col(c).cast(pl.String) for c in df_att.columns])
+        except Exception:
+            wb = openpyxl.load_workbook(attendance_csv_path, read_only=True, data_only=True)
+            ws = wb.active
+            rows = list(ws.iter_rows(values_only=True))
+            wb.close()
+            if rows:
+                headers = [str(c or '').strip() for c in rows[0]]
+                data_dict = {h: [str(r[i] or '').strip() if i < len(r) else '' for r in rows[1:]] for i, h in enumerate(headers)}
+                df_att = pl.DataFrame(data_dict)
+            else:
+                df_att = pl.DataFrame()
+    else:
+        df_att = pl.read_csv(attendance_csv_path, ignore_errors=True, infer_schema_length=0)
+
+    att_cols = {str(c).strip().lower(): c for c in df_att.columns}
     att_id_col = att_cols.get('employeeid') or df_att.columns[1]
 
-    # Map dates in attendance file: '01-10-2026' -> '01-Oct-26'
+    # Map dates in attendance file: '01-10-2026' or '2026-10-01' -> date_list keys
     att_date_cols: Dict[str, str] = {}
     for col in df_att.columns:
-        clean_c = col.strip()
-        # Pattern: DD-MM-YYYY
+        clean_c = str(col).strip()
         parts = clean_c.split('-')
-        if len(parts) == 3 and len(parts[0]) == 2 and len(parts[2]) == 4:
+        # DD-MM-YYYY
+        if len(parts) == 3 and len(parts[0]) == 2 and parts[2][:4].isdigit():
             try:
                 d_day = parts[0]
                 m_num = int(parts[1])
-                y_short = parts[2][-2:]
+                y_val = parts[2][:4]
+                y_short = y_val[-2:]
                 m_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
                 m_str = m_names[m_num - 1]
                 header_fmt = f"{d_day}-{m_str}-{y_short}"
+                iso_fmt = f"{int(y_val):04d}-{m_num:02d}-{int(d_day):02d}"
                 att_date_cols[header_fmt] = clean_c
+                att_date_cols[iso_fmt] = clean_c
+            except Exception:
+                pass
+        # YYYY-MM-DD
+        elif len(parts) == 3 and len(parts[0]) == 4:
+            try:
+                y_val = parts[0]
+                m_num = int(parts[1])
+                d_day = parts[2][:2]
+                y_short = y_val[-2:]
+                m_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+                m_str = m_names[m_num - 1]
+                header_fmt = f"{d_day}-{m_str}-{y_short}"
+                iso_fmt = f"{int(y_val):04d}-{m_num:02d}-{int(d_day):02d}"
+                att_date_cols[header_fmt] = clean_c
+                att_date_cols[iso_fmt] = clean_c
             except Exception:
                 pass
 
@@ -216,7 +252,7 @@ def build_punch_adherence_dataset(
             continue
         punches = {}
         for d_hdr in date_list:
-            orig_col = att_date_cols.get(d_hdr)
+            orig_col = att_date_cols.get(d_hdr) or (d_hdr if d_hdr in r else None)
             if orig_col and orig_col in r:
                 val = str(r.get(orig_col) or '').strip().upper()
                 punches[d_hdr] = 'P' if val == 'P' else 'A'

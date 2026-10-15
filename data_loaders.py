@@ -244,7 +244,7 @@ def load_user_master(
 
 def load_valinor_attendance(file_path: str, date_list: List[str]) -> Tuple[List[Dict[str, Any]], Dict[int, Dict[str, str]]]:
     """
-    Loads Valinor Attendance.csv using Polars and indexes daily attendance punches by numeric ID.
+    Loads Valinor Attendance (CSV or XLSX) using Polars/OpenPyXL and indexes daily attendance punches by numeric ID.
     Normalizes 'P', '1', 'P1' -> 'P', 'Tech Issue' -> 'Tech Issue', else 'A'.
     """
     if not os.path.exists(file_path):
@@ -253,48 +253,73 @@ def load_valinor_attendance(file_path: str, date_list: List[str]) -> Tuple[List[
     att_map: Dict[int, Dict[str, str]] = {}
     att_rows: List[Dict[str, Any]] = []
 
-    if file_path.endswith('.csv'):
+    if file_path.lower().endswith('.csv'):
         df = pl.read_csv(file_path, infer_schema_length=0, truncate_ragged_lines=True)
-        cols = df.columns
-        emp_col = cols[1]
-        name_col = cols[0]
-        fac_col = cols[2]
+    elif file_path.lower().endswith(('.xlsx', '.xls')):
+        try:
+            df = pl.read_excel(file_path)
+            df = df.select([pl.col(c).cast(pl.String) for c in df.columns])
+        except Exception:
+            wb = openpyxl.load_workbook(file_path, read_only=True, data_only=True)
+            ws = wb.active
+            rows = list(ws.iter_rows(values_only=True))
+            wb.close()
+            if rows:
+                headers = [str(c or '').strip() for c in rows[0]]
+                data_dict = {h: [str(r[i] or '').strip() if i < len(r) else '' for r in rows[1:]] for i, h in enumerate(headers)}
+                df = pl.DataFrame(data_dict)
+            else:
+                return [], {}
+    else:
+        return [], {}
 
-        date_col_map = {}
+    cols = df.columns
+    emp_col = cols[1]
+    name_col = cols[0]
+    fac_col = cols[2]
+
+    date_col_map = {}
+    for d in date_list:
+        # Handle DD-MM-YYYY vs YYYY-MM-DD
+        d_parts = d.split('-')
+        d_alt = f"{d_parts[2]}-{d_parts[1]}-{d_parts[0]}" if len(d_parts) == 3 else d
+        matched_col = next((
+            c for c in cols
+            if str(c).strip() == d
+            or str(c).strip() == d_alt
+            or str(c).strip().startswith(d)
+            or str(c).strip().startswith(d_alt)
+            or str(c).strip().endswith(d[-5:])
+        ), None)
+        if matched_col:
+            date_col_map[d] = matched_col
+
+    for row in df.iter_rows(named=True):
+        raw_emp = row.get(emp_col)
+        num_id = extract_numeric_id(raw_emp)
+        if not num_id:
+            continue
+
+        days = {}
         for d in date_list:
-            # Handle DD-MM-YYYY vs YYYY-MM-DD
-            d_parts = d.split('-')
-            d_alt = f"{d_parts[2]}-{d_parts[1]}-{d_parts[0]}" if len(d_parts) == 3 else d
-            matched_col = next((c for c in cols if c == d or c == d_alt or c.endswith(d[-5:])), None)
-            if matched_col:
-                date_col_map[d] = matched_col
+            col_name = date_col_map.get(d)
+            raw_val = str(row.get(col_name) or '').strip().upper() if col_name else 'A'
+            if raw_val in ('P', '1', 'P1'):
+                val = 'P'
+            elif 'TECH' in raw_val:
+                val = 'Tech Issue'
+            else:
+                val = 'A'
+            days[d] = val
 
-        for row in df.iter_rows(named=True):
-            raw_emp = row.get(emp_col)
-            num_id = extract_numeric_id(raw_emp)
-            if not num_id:
-                continue
-
-            days = {}
-            for d in date_list:
-                col_name = date_col_map.get(d)
-                raw_val = str(row.get(col_name) or '').strip().upper() if col_name else 'A'
-                if raw_val in ('P', '1', 'P1'):
-                    val = 'P'
-                elif 'TECH' in raw_val:
-                    val = 'Tech Issue'
-                else:
-                    val = 'A'
-                days[d] = val
-
-            att_obj = {
-                'empId': num_id,
-                'name': str(row.get(name_col) or '').strip(),
-                'facility': str(row.get(fac_col) or '').strip(),
-                'days': days
-            }
-            att_rows.append(att_obj)
-            att_map[num_id] = days
+        att_obj = {
+            'empId': num_id,
+            'name': str(row.get(name_col) or '').strip(),
+            'facility': str(row.get(fac_col) or '').strip(),
+            'days': days
+        }
+        att_rows.append(att_obj)
+        att_map[num_id] = days
 
     return att_rows, att_map
 

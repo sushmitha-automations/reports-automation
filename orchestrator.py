@@ -32,13 +32,19 @@ def get_month_dates(year: int, month: int, cutoff_day: int) -> List[str]:
 
 def find_file_by_pattern(base_dir: str, patterns: List[str]) -> Optional[str]:
     """Finds first matching file in base_dir given multiple case-insensitive patterns."""
+    if not os.path.exists(base_dir):
+        return None
+    dir_files = [f for f in os.listdir(base_dir) if not f.startswith('~$')]
     for pattern in patterns:
         matches = glob.glob(os.path.join(base_dir, pattern))
         if matches:
-            return matches[0]
-        # Also try case-insensitive check
-        for f in os.listdir(base_dir):
-            if any(p.replace('*', '').lower() in f.lower() for p in patterns):
+            valid_m = [m for m in matches if not os.path.basename(m).startswith('~$')]
+            if valid_m:
+                return valid_m[0]
+        # Case-insensitive substring check
+        clean_p = pattern.replace('*', '').lower()
+        for f in dir_files:
+            if clean_p in f.lower():
                 return os.path.join(base_dir, f)
     return None
 
@@ -86,7 +92,16 @@ def run_attendance_adherence(
     print(f"      Loaded {len(user_rows)} users into Valinor Dump.")
 
     notify(0.20, "Loading Biometric Attendance punches (Polars)...")
-    att_path = find_file_by_pattern(base_dir, ['*Attendance*.csv', '*attendance*.csv', 'Valinor Attendance.csv'])
+    att_path = find_file_by_pattern(
+        base_dir,
+        [
+            '*Attendance*.xlsx', '*attendance*.xlsx',
+            '*Attendance*.csv', '*attendance*.csv',
+            '*Attendance*.xls', '*attendance*.xls',
+            'Valinor Attendance.xlsx', 'Valinor Attendance.csv',
+            'Attendance'
+        ]
+    )
     if not att_path:
         raise FileNotFoundError(f"Valinor Attendance file not found in {base_dir}")
 
@@ -208,7 +223,16 @@ def run_punch_adherence_report(
         raise FileNotFoundError(f"Valinor Dump-Facility.csv not found in {base_dir}")
 
     notify(0.12, "Locating Biometric Attendance punch records...")
-    att_csv = find_file_by_pattern(base_dir, ['*Attendance*.csv', '*attendance*.csv', 'Valinor Attendance.csv'])
+    att_csv = find_file_by_pattern(
+        base_dir,
+        [
+            '*Attendance*.xlsx', '*attendance*.xlsx',
+            '*Attendance*.csv', '*attendance*.csv',
+            '*Attendance*.xls', '*attendance*.xls',
+            'Valinor Attendance.xlsx', 'Valinor Attendance.csv',
+            'Attendance'
+        ]
+    )
     if not att_csv:
         raise FileNotFoundError(f"Valinor Attendance file not found in {base_dir}")
 
