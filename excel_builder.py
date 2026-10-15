@@ -305,7 +305,7 @@ def build_attendance_adherence_report(
             cell.font = FONT_CALIBRI_11_BOLD_WHITE
             cell.fill = FILL_DARK_BLUE
             cell.alignment = ALIGN_CENTER
-            cell.border = BORDER_THIN_GRAY
+            cell.border = BORDER_THIN_BLACK
 
     # Merge header cells
     ws_val.merge_cells('Q1:W1')
@@ -351,7 +351,7 @@ def build_attendance_adherence_report(
         for c_idx in range(1, len(row_data) + 1):
             cell = ws_val.cell(row=r_idx, column=c_idx)
             cell.font = FONT_CALIBRI_11
-            cell.border = BORDER_THIN_GRAY
+            cell.border = BORDER_THIN_BLACK
 
     # -------------------------------------------------------------------------
     # SHEET 5: Chroma vs Valinor summary
@@ -363,7 +363,7 @@ def build_attendance_adherence_report(
         cell.font = FONT_CALIBRI_11_BOLD_WHITE
         cell.fill = FILL_DARK_BLUE
         cell.alignment = ALIGN_CENTER
-        cell.border = BORDER_THIN_GRAY
+        cell.border = BORDER_THIN_BLACK
 
     # Group by HRBP
     hrbp_map: Dict[str, Dict[str, int]] = {}
@@ -388,7 +388,7 @@ def build_attendance_adherence_report(
         for c_idx in range(5, 9):
             cell = ws_chroma_val_sum.cell(row=r_sum_idx, column=c_idx)
             cell.font = FONT_CALIBRI_11
-            cell.border = BORDER_THIN_GRAY
+            cell.border = BORDER_THIN_BLACK
             cell.alignment = ALIGN_LEFT if c_idx == 5 else ALIGN_CENTER
         r_sum_idx += 1
 
@@ -396,8 +396,8 @@ def build_attendance_adherence_report(
     # SHEETS 1, 2, 3: Attendance Check (LM, HL, FM)
     # -------------------------------------------------------------------------
     def populate_attendance_check_sheet(ws, label_header, entities, match_col_letter):
-        ws.row_dimensions[1].height = 24
-        ws.row_dimensions[2].height = 30
+        ws.row_dimensions[1].height = 28
+        ws.row_dimensions[2].height = 34
 
         r1 = [label_header]
         r2 = [label_header]
@@ -415,7 +415,7 @@ def build_attendance_adherence_report(
                 cell.font = FONT_CALIBRI_11_BOLD
                 cell.fill = FILL_HEADER_BLUE_LIGHT_80
                 cell.alignment = ALIGN_CENTER_WRAP
-                cell.border = BORDER_THIN_GRAY
+                cell.border = BORDER_THIN_BLACK
 
         ws.merge_cells('A1:A2')
         for d_idx in range(num_days):
@@ -454,7 +454,7 @@ def build_attendance_adherence_report(
             for c_idx in range(1, len(row_data) + 1):
                 cell = ws.cell(row=cur_r, column=c_idx)
                 cell.font = FONT_CALIBRI_11
-                cell.border = BORDER_THIN_GRAY
+                cell.border = BORDER_THIN_BLACK
                 if c_idx == 1:
                     cell.alignment = ALIGN_LEFT
                 else:
@@ -466,7 +466,7 @@ def build_attendance_adherence_report(
 
         # Grand Total Row
         tot_row_num = start_row + len(entities)
-        ws.row_dimensions[tot_row_num].height = 21
+        ws.row_dimensions[tot_row_num].height = 22
         tot_row_data = ['Grand Total']
 
         for d_idx in range(num_days):
@@ -486,7 +486,7 @@ def build_attendance_adherence_report(
             cell = ws.cell(row=tot_row_num, column=c_idx)
             cell.font = FONT_CALIBRI_11_BOLD
             cell.fill = FILL_GRAND_TOTAL_DARK_25
-            cell.border = BORDER_THIN_GRAY
+            cell.border = BORDER_THIN_BLACK
             cell.alignment = ALIGN_LEFT if c_idx == 1 else ALIGN_CENTER
             if c_idx > 1 and (c_idx - 2) % 4 == 3:
                 cell.number_format = FMT_PERCENT_INT
@@ -507,19 +507,19 @@ def build_attendance_adherence_report(
             )
             ws.conditional_formatting.add(combined_adh_range, color_scale_rule)
 
-        # Column widths
-        ws.column_dimensions['A'].width = 22 if label_header == 'POD' else 14
+        # Column widths for crisp wrapping matching Screenshot 4
+        ws.column_dimensions['A'].width = 18 if label_header == 'POD' else 15
         for c_idx in range(2, len(tot_row_data) + 1):
             c_let = get_column_letter(c_idx)
             mod = (c_idx - 2) % 4
             if mod == 0:
-                ws.column_dimensions[c_let].width = 23.3
+                ws.column_dimensions[c_let].width = 14.5
             elif mod == 1:
-                ws.column_dimensions[c_let].width = 19.9
+                ws.column_dimensions[c_let].width = 13.0
             elif mod == 2:
-                ws.column_dimensions[c_let].width = 13.1
+                ws.column_dimensions[c_let].width = 11.5
             else:
-                ws.column_dimensions[c_let].width = 12.7
+                ws.column_dimensions[c_let].width = 12.0
 
     notify(0.88, "Writing Executive Summary sheets (Attendance Check LM, HL, FM)...")
     populate_attendance_check_sheet(ws_lm, 'POD', LM_PODS, 'K')
@@ -575,21 +575,21 @@ def build_onboarding_report(
         cell.font = FONT_APTOS_11_BOLD
         cell.fill = FILL_HEADER_BLUE_LIGHT_80
         cell.alignment = ALIGN_CENTER
-        cell.border = BORDER_THIN_GRAY
+        cell.border = BORDER_THIN_BLACK
 
     for row_vals in base_rows:
         ws_base.append(row_vals)
     for row in ws_base.iter_rows(min_row=2):
         for cell in row:
             cell.font = FONT_APTOS_11
-            cell.border = BORDER_THIN_GRAY
+            cell.border = BORDER_THIN_BLACK
 
     # -------------------------------------------------------------------------
     # SHEETS 1, 2, 3, 4: Aadhar Summary Sheets
     # -------------------------------------------------------------------------
     def populate_aadhar_summary(ws, label_header, pod_list):
-        ws.row_dimensions[1].height = 24
-        ws.row_dimensions[2].height = 20
+        ws.row_dimensions[1].height = 28
+        ws.row_dimensions[2].height = 30
 
         r1 = [label_header]
         r2 = [label_header]
@@ -602,37 +602,20 @@ def build_onboarding_report(
         ws.append(r1)
         ws.append(r2)
 
-        # Style Headers BEFORE merging to ensure all cells get border and fill
+        # Style Headers BEFORE merging to ensure all cells get uniform soft blue fill, black text, and thin black border
         for c_idx in range(1, len(r1) + 1):
             cell_1 = ws.cell(row=1, column=c_idx)
             cell_2 = ws.cell(row=2, column=c_idx)
 
-            cell_1.border = BORDER_THIN_GRAY
-            cell_2.border = BORDER_THIN_GRAY
-            cell_1.alignment = ALIGN_CENTER
-            cell_2.alignment = ALIGN_CENTER
+            cell_1.border = BORDER_THIN_BLACK
+            cell_2.border = BORDER_THIN_BLACK
+            cell_1.alignment = ALIGN_CENTER_WRAP
+            cell_2.alignment = ALIGN_CENTER_WRAP
 
-            if c_idx == 1:
-                cell_1.font = FONT_APTOS_11_BOLD
-                cell_1.fill = FILL_HEADER_BLUE_LIGHT_80
-                cell_2.font = FONT_APTOS_11_BOLD
-                cell_2.fill = FILL_HEADER_BLUE_LIGHT_80
-            else:
-                mod = (c_idx - 2) % 5
-                if mod == 4:
-                    cell_1.font = FONT_APTOS_11_BOLD_WHITE
-                    cell_1.fill = FILL_RED
-                    cell_2.font = FONT_APTOS_11_BOLD_WHITE
-                    cell_2.fill = FILL_RED
-                else:
-                    cell_1.font = FONT_APTOS_11_BOLD
-                    cell_1.fill = FILL_HEADER_BLUE_LIGHT_80
-                    if mod == 3:
-                        cell_2.font = FONT_APTOS_11_BOLD
-                        cell_2.fill = FILL_YELLOW
-                    else:
-                        cell_2.font = FONT_APTOS_11_BOLD
-                        cell_2.fill = FILL_HEADER_BLUE_LIGHT_80
+            cell_1.font = FONT_APTOS_11_BOLD
+            cell_1.fill = FILL_HEADER_BLUE_LIGHT_80
+            cell_2.font = FONT_APTOS_11_BOLD
+            cell_2.fill = FILL_HEADER_BLUE_LIGHT_80
 
         # Merge Header cells
         ws.merge_cells('A1:A2')
@@ -666,7 +649,7 @@ def build_onboarding_report(
             for c_idx in range(1, len(row_data) + 1):
                 cell = ws.cell(row=cur_r, column=c_idx)
                 cell.font = FONT_APTOS_11
-                cell.border = BORDER_THIN_GRAY
+                cell.border = BORDER_THIN_BLACK
                 if c_idx == 1:
                     cell.alignment = ALIGN_LEFT
                 else:
@@ -679,7 +662,7 @@ def build_onboarding_report(
 
         # Grand Total Row (Daily Table)
         tot_row_num = start_row + len(pod_list)
-        ws.row_dimensions[tot_row_num].height = 21
+        ws.row_dimensions[tot_row_num].height = 22
         tot_row_data = ['Grand Total']
 
         for d_idx in range(num_days):
@@ -701,7 +684,7 @@ def build_onboarding_report(
             cell = ws.cell(row=tot_row_num, column=c_idx)
             cell.font = FONT_APTOS_11_BOLD
             cell.fill = FILL_GRAND_TOTAL_DARK_25
-            cell.border = BORDER_THIN_GRAY
+            cell.border = BORDER_THIN_BLACK
             cell.alignment = ALIGN_LEFT if c_idx == 1 else ALIGN_CENTER
             if c_idx > 1 and (c_idx - 2) % 5 == 3:
                 cell.number_format = FMT_PERCENT_INT
@@ -710,8 +693,8 @@ def build_onboarding_report(
 
         # --- MTD Table ---
         mtd_start = tot_row_num + 3
-        ws.row_dimensions[mtd_start].height = 24
-        ws.row_dimensions[mtd_start + 1].height = 20
+        ws.row_dimensions[mtd_start].height = 28
+        ws.row_dimensions[mtd_start + 1].height = 30
 
         ws.append([])  # Spacing
         ws.append([])
@@ -722,21 +705,15 @@ def build_onboarding_report(
         for c in range(1, 7):
             cell_1 = ws.cell(row=mtd_start, column=c)
             cell_2 = ws.cell(row=mtd_start + 1, column=c)
-            cell_1.border = BORDER_THIN_GRAY
-            cell_2.border = BORDER_THIN_GRAY
-            cell_1.alignment = ALIGN_CENTER
-            cell_2.alignment = ALIGN_CENTER
+            cell_1.border = BORDER_THIN_BLACK
+            cell_2.border = BORDER_THIN_BLACK
+            cell_1.alignment = ALIGN_CENTER_WRAP
+            cell_2.alignment = ALIGN_CENTER_WRAP
 
             cell_1.font = FONT_APTOS_11_BOLD
             cell_1.fill = FILL_HEADER_BLUE_LIGHT_80
             cell_2.font = FONT_APTOS_11_BOLD
-            if c == 5:
-                cell_2.fill = FILL_YELLOW
-            elif c == 6:
-                cell_2.font = FONT_APTOS_11_BOLD_WHITE
-                cell_2.fill = FILL_RED
-            else:
-                cell_2.fill = FILL_HEADER_BLUE_LIGHT_80
+            cell_2.fill = FILL_HEADER_BLUE_LIGHT_80
 
         ws.merge_cells(start_row=mtd_start, start_column=1, end_row=mtd_start + 1, end_column=1)
         ws.merge_cells(start_row=mtd_start, start_column=2, end_row=mtd_start, end_column=6)
@@ -765,7 +742,7 @@ def build_onboarding_report(
             for c_idx in range(1, 7):
                 cell = ws.cell(row=cur_mtd_r, column=c_idx)
                 cell.font = FONT_APTOS_11
-                cell.border = BORDER_THIN_GRAY
+                cell.border = BORDER_THIN_BLACK
                 cell.alignment = ALIGN_LEFT if c_idx == 1 else ALIGN_CENTER
                 if c_idx == 5:
                     cell.number_format = FMT_PERCENT_INT
@@ -774,7 +751,7 @@ def build_onboarding_report(
 
         # MTD Grand Total
         mtd_tot_r = mtd_data_start + len(pod_list)
-        ws.row_dimensions[mtd_tot_r].height = 21
+        ws.row_dimensions[mtd_tot_r].height = 22
         ws.append([
             'Grand Total',
             f"=SUM(B{mtd_data_start}:B{mtd_tot_r - 1})",
@@ -787,19 +764,28 @@ def build_onboarding_report(
             cell = ws.cell(row=mtd_tot_r, column=c_idx)
             cell.font = FONT_APTOS_11_BOLD
             cell.fill = FILL_GRAND_TOTAL_DARK_25
-            cell.border = BORDER_THIN_GRAY
+            cell.border = BORDER_THIN_BLACK
             cell.alignment = ALIGN_LEFT if c_idx == 1 else ALIGN_CENTER
             if c_idx == 5:
                 cell.number_format = FMT_PERCENT_INT
             elif c_idx > 1:
                 cell.number_format = FMT_INT_COMMAS
 
-        # Column widths
-        ws.column_dimensions['A'].width = 24
+        # Column widths for crisp wrapping matching Screenshot 2
+        ws.column_dimensions['A'].width = 22.0 if label_header == 'POD' else 18.0
         for c_idx in range(2, len(tot_row_data) + 1):
             c_let = get_column_letter(c_idx)
             mod = (c_idx - 2) % 5
-            ws.column_dimensions[c_let].width = 16 if mod == 4 else 15
+            if mod == 0:
+                ws.column_dimensions[c_let].width = 12.5  # Total Onboarding -> Total\nOnboarding
+            elif mod == 1:
+                ws.column_dimensions[c_let].width = 9.5   # Aadhar
+            elif mod == 2:
+                ws.column_dimensions[c_let].width = 9.5   # Manual
+            elif mod == 3:
+                ws.column_dimensions[c_let].width = 13.5  # Compliance %
+            else:
+                ws.column_dimensions[c_let].width = 11.5  # Hyperverge Red / Red -> Hyperverge\nRed
 
     notify(0.35, "Writing Aadhaar KYC Compliance tabs (LM, HL, FM, HO-RO)...")
     populate_aadhar_summary(ws_lm, 'POD', LM_PODS)
@@ -811,13 +797,13 @@ def build_onboarding_report(
     # SHEETS 5, 6, 7, 8: Manual HR Approval Breakdown
     # -------------------------------------------------------------------------
     def populate_manual_hr(ws, pod_list):
-        ws.row_dimensions[1].height = 24
+        ws.row_dimensions[1].height = 28
         ws.append(['Approved by', 'Manual cases', 'Red Case', 'total'])
         for cell in ws[1]:
             cell.font = FONT_APTOS_11_BOLD
             cell.fill = FILL_HEADER_BLUE_LIGHT_80
-            cell.border = BORDER_THIN_GRAY
-            cell.alignment = ALIGN_CENTER
+            cell.border = BORDER_THIN_BLACK
+            cell.alignment = ALIGN_CENTER_WRAP
 
         # Identify unique HR recruiters approving manual or red cases
         col_idx = {h.strip().lower(): i for i, h in enumerate(base_headers)}
@@ -862,14 +848,14 @@ def build_onboarding_report(
             for c in range(1, 5):
                 cell = ws.cell(row=h_idx, column=c)
                 cell.font = FONT_APTOS_11
-                cell.border = BORDER_THIN_GRAY
+                cell.border = BORDER_THIN_BLACK
                 cell.alignment = ALIGN_LEFT if c == 1 else ALIGN_CENTER
                 if c > 1:
                     cell.number_format = FMT_INT_COMMAS
 
         # Grand Total
         tot_r = len(sorted_hrs) + 2
-        ws.row_dimensions[tot_r].height = 21
+        ws.row_dimensions[tot_r].height = 22
         end_r = tot_r - 1
         ws.append([
             'Grand Total',
@@ -881,7 +867,7 @@ def build_onboarding_report(
             cell = ws.cell(row=tot_r, column=c)
             cell.font = FONT_APTOS_11_BOLD
             cell.fill = FILL_GRAND_TOTAL_DARK_25
-            cell.border = BORDER_THIN_GRAY
+            cell.border = BORDER_THIN_BLACK
             cell.alignment = ALIGN_LEFT if c == 1 else ALIGN_CENTER
             if c > 1:
                 cell.number_format = FMT_INT_COMMAS
@@ -961,7 +947,7 @@ def build_punch_adherence_report(
             cell = ws.cell(row=1, column=c)
             cell.font = FONT_APTOS_9_BOLD
             cell.alignment = ALIGN_CENTER_WRAP
-            cell.border = BORDER_THIN_GRAY
+            cell.border = BORDER_THIN_BLACK
             if c == 5:
                 cell.fill = FILL_PUNCH_RED
             elif c == 6:
@@ -976,7 +962,7 @@ def build_punch_adherence_report(
             cell = ws.cell(row=2, column=c)
             cell.font = FONT_APTOS_9_BOLD
             cell.alignment = ALIGN_CENTER_WRAP
-            cell.border = BORDER_THIN_GRAY
+            cell.border = BORDER_THIN_BLACK
             if c in (5, 6, 7):
                 cell.fill = FILL_PUNCH_HDR
 
@@ -1000,7 +986,7 @@ def build_punch_adherence_report(
             for c in range(1, 9):
                 cell = ws.cell(row=cur_r, column=c)
                 cell.font = FONT_APTOS_11
-                cell.border = BORDER_THIN_GRAY
+                cell.border = BORDER_THIN_BLACK
                 if c == 1:
                     cell.alignment = ALIGN_LEFT
                 else:
@@ -1012,7 +998,7 @@ def build_punch_adherence_report(
 
         # Grand Total Row
         tot_r = start_r + len(entity_list)
-        ws.row_dimensions[tot_r].height = 21
+        ws.row_dimensions[tot_r].height = 22
         end_r = tot_r - 1
 
         tot_vals = [
@@ -1031,7 +1017,7 @@ def build_punch_adherence_report(
             cell = ws.cell(row=tot_r, column=c)
             cell.font = FONT_APTOS_11_BOLD
             cell.fill = FILL_PUNCH_TOTAL
-            cell.border = BORDER_THIN_GRAY
+            cell.border = BORDER_THIN_BLACK
             if c == 1:
                 cell.alignment = ALIGN_LEFT
             else:
@@ -1059,13 +1045,13 @@ def build_punch_adherence_report(
         cell.font = FONT_APTOS_9_BOLD
         cell.fill = FILL_PUNCH_HDR
         cell.alignment = ALIGN_CENTER
-        cell.border = BORDER_THIN_GRAY
+        cell.border = BORDER_THIN_BLACK
 
     # Blank Row 2 matching reference
     ws_att.append([None] * len(att_h1))
     for c in range(1, len(att_h1) + 1):
         cell = ws_att.cell(row=2, column=c)
-        cell.border = BORDER_THIN_GRAY
+        cell.border = BORDER_THIN_BLACK
 
     first_date_col = get_column_letter(8)
     last_date_col = get_column_letter(7 + num_days)
@@ -1094,7 +1080,7 @@ def build_punch_adherence_report(
     for row in ws_att.iter_rows(min_row=3, max_row=2 + total_wf):
         for idx, cell in enumerate(row):
             cell.font = FONT_APTOS_11
-            cell.border = BORDER_THIN_GRAY
+            cell.border = BORDER_THIN_BLACK
             if idx in (0, 1, 3, 4, 5, 6):
                 cell.alignment = ALIGN_LEFT
             else:
@@ -1123,7 +1109,7 @@ def build_punch_adherence_report(
         cell.font = FONT_APTOS_9_BOLD
         cell.fill = FILL_PUNCH_HDR
         cell.alignment = ALIGN_CENTER
-        cell.border = BORDER_THIN_GRAY
+        cell.border = BORDER_THIN_BLACK
 
     col_30d_idx = 8 + num_days
     col_3d_idx = 9 + num_days
@@ -1141,7 +1127,7 @@ def build_punch_adherence_report(
     for row in ws_punched.iter_rows(min_row=2, max_row=1 + total_wf):
         for idx, cell in enumerate(row):
             cell.font = FONT_APTOS_11
-            cell.border = BORDER_THIN_GRAY
+            cell.border = BORDER_THIN_BLACK
             if idx in (0, 1, 3, 4):
                 cell.alignment = ALIGN_LEFT
             else:
@@ -1168,7 +1154,7 @@ def build_punch_adherence_report(
         cell = ws_base.cell(row=1, column=c)
         cell.font = FONT_APTOS_9_BOLD
         cell.alignment = ALIGN_CENTER_WRAP
-        cell.border = BORDER_THIN_GRAY
+        cell.border = BORDER_THIN_BLACK
         if c == 7:
             cell.fill = FILL_PUNCH_RED
         elif c == 8:
@@ -1194,7 +1180,7 @@ def build_punch_adherence_report(
     for row in ws_base.iter_rows(min_row=2, max_row=1 + len(base_hub_combos)):
         for idx, cell in enumerate(row):
             cell.font = FONT_APTOS_11
-            cell.border = BORDER_THIN_GRAY
+            cell.border = BORDER_THIN_BLACK
             if idx in (0, 1, 2):
                 cell.alignment = ALIGN_LEFT
             else:
