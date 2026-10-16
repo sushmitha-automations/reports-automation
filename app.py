@@ -312,8 +312,11 @@ with v_col2:
 
     if offroll:
         st.markdown(f"✅ **Offroll Headcount:** <span class='file-name-tag'>{offroll['name']}</span> <span class='file-size-tag'>({offroll['size']})</span>", unsafe_allow_html=True)
+    elif c_lm or c_fm or c_hl:
+        valinor_loaded = [c['name'] for c in [c_lm, c_fm, c_hl] if c]
+        st.markdown(f"✅ **Offroll Headcount:** <span class='badge-ready'>Active ({len(valinor_loaded)} Valinor base files)</span>", unsafe_allow_html=True)
     else:
-        st.markdown("❌ **Offroll Headcount:** <span class='badge-missing'>Not Found (`Offroll HC.xlsx`)</span>", unsafe_allow_html=True)
+        st.markdown("❌ **Offroll Headcount:** <span class='badge-missing'>Not Found (`Offroll HC.xlsx` or `Valinor base files`)</span>", unsafe_allow_html=True)
 
     if att:
         st.markdown(f"✅ **Biometric Punch:** <span class='file-name-tag'>{att['name']}</span> <span class='file-size-tag'>({att['size']})</span>", unsafe_allow_html=True)
@@ -350,7 +353,7 @@ with v_col3:
 
 # Status Badges
 att_ready = bool(fac and users and att and c_lm and c_fm and c_hl)
-punch_ready = bool(onroll and offroll and fac and att)
+punch_ready = bool(onroll and (offroll or (c_lm and c_hl and c_fm)) and fac and att)
 onb_ready = bool(funnel)
 
 st.markdown("<br>", unsafe_allow_html=True)

@@ -1113,11 +1113,12 @@ def build_punch_adherence_report(
 
     col_30d_idx = 8 + num_days
     col_3d_idx = 9 + num_days
+    att_max_col = get_column_letter(len(att_h1))
 
     for idx, emp in enumerate(workforce_records):
         cur_r = 2 + idx
-        f_v_30d = f"=VLOOKUP(A{cur_r},'Attendance Base'!$A:$T,{col_30d_idx},FALSE)"
-        f_v_3d = f"=VLOOKUP(A{cur_r},'Attendance Base'!$A:$T,{col_3d_idx},FALSE)"
+        f_v_30d = f"=VLOOKUP(A{cur_r},'Attendance Base'!$A:${att_max_col},{col_30d_idx},FALSE)"
+        f_v_3d = f"=VLOOKUP(A{cur_r},'Attendance Base'!$A:${att_max_col},{col_3d_idx},FALSE)"
         f_v_col = f'=IF(G{cur_r}="Y","Green",IF(F{cur_r}="Y","Amber","Red"))'
 
         row_vals = [emp['id'], emp['name'], emp['type'], emp['pod'], emp['facility'], f_v_30d, f_v_3d, f_v_col]

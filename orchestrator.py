@@ -214,15 +214,23 @@ def run_punch_adherence_report(
     if not onroll_file:
         raise FileNotFoundError(f"Onroll HC.xlsx not found in {base_dir}")
 
+    notify(0.18, "Locating Chroma masters / Valinor base files for Offroll workforce...")
+    chroma_files = []
+    for pat in ['*(LM)*.xlsx', '*LM*.xlsx', '*(FM)*.xlsx', '*FM*.xlsx', '*(HL*.xlsx', '*HL*.xlsx', '*Corp*.xlsx', '*Valinor*.xlsx']:
+        matches = glob.glob(os.path.join(base_dir, pat))
+        for m in matches:
+            if m not in chroma_files and not os.path.basename(m).startswith('~$'):
+                chroma_files.append(m)
+
     offroll_file = find_file_by_pattern(base_dir, ['*Offroll*.xlsx', '*offroll*.xlsx', 'Offroll HC.xlsx'])
-    if not offroll_file:
-        raise FileNotFoundError(f"Offroll HC.xlsx not found in {base_dir}")
+    if not offroll_file and not chroma_files:
+        raise FileNotFoundError(f"Neither Offroll HC.xlsx nor Valinor base files found in {base_dir}")
 
     fac_csv = find_file_by_pattern(base_dir, ['*Facility*.csv', '*facility*.csv', 'Valinor Dump-Facility.csv'])
     if not fac_csv:
         raise FileNotFoundError(f"Valinor Dump-Facility.csv not found in {base_dir}")
 
-    notify(0.12, "Locating Biometric Attendance punch records...")
+    notify(0.20, "Locating Biometric Attendance punch records...")
     att_csv = find_file_by_pattern(
         base_dir,
         [
@@ -235,14 +243,6 @@ def run_punch_adherence_report(
     )
     if not att_csv:
         raise FileNotFoundError(f"Valinor Attendance file not found in {base_dir}")
-
-    notify(0.18, "Locating Chroma masters for role enrichment...")
-    chroma_files = []
-    for pat in ['*(LM)*.xlsx', '*LM*.xlsx', '*(FM)*.xlsx', '*FM*.xlsx', '*(HL*.xlsx', '*HL*.xlsx', '*Corp*.xlsx']:
-        matches = glob.glob(os.path.join(base_dir, pat))
-        for m in matches:
-            if m not in chroma_files and not os.path.basename(m).startswith('~$'):
-                chroma_files.append(m)
 
     notify(0.25, f"Assembling workforce & joining daily punches with Polars ({len(date_list)} days)...")
     workforce_records, base_hub_combos = build_punch_adherence_dataset(
